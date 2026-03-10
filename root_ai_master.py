@@ -1,93 +1,60 @@
-import torch
-import torch.nn as nn
-import torch.optim as optim
+import streamlit as st
+import pandas as pd
+import numpy as np
 import time
 import random
 
-# ==========================================
-# 1. IL CUORE: LOGICA TEORIA DELLA RADICE
-# ==========================================
-class RootEngine:
-    def __init__(self):
-        # Pesi iniziali calibrati (E, N, S, C, T)
-        self.weights = torch.tensor([1.0, 1.2, 1.8, 1.0, 1.1], requires_grad=True)
-        self.optimizer = optim.SGD([self.weights], lr=0.01)
+# --- CONFIGURAZIONE DASHBOARD ---
+st.set_page_config(page_title="Root-AI Control Panel", layout="wide")
+st.title("🌳 Root-AI: Dashboard della Saturazione")
 
-    def calculate_p(self, E, N, S, C, T):
-        """
-        Formula di Marco: P = ((E * N) + S) / (C + T)
-        """
-        w = self.weights
-        numerator = (E * w[0] * N * w[1]) + (S * w[2])
-        denominator = (C * w[3]) + (T * w[4])
-        return numerator / denominator
+# --- LOGICA CORE (La tua formula) ---
+def calcola_p(E, N, S, C, T):
+    # P = ((E * N) + S) / (C + T)
+    # Usiamo pesi ottimizzati dall'ultima calibrazione
+    weights = {"E": 1.0, "N": 1.2, "S": 1.8, "C": 1.0, "T": 1.1}
+    num = (E * weights["E"] * N * weights["N"]) + (S * weights["S"])
+    den = (C * weights["C"]) + (T * weights["T"])
+    return num / den
 
-# ==========================================
-# 2. IL CERVELLO: AI CHE IMPARA (LOSS FUNCTION)
-# ==========================================
-    def update_ai(self, predicted_p, actual_outcome):
-        """
-        L'AI confronta la pressione calcolata con l'evento reale.
-        Se P era alto ma non c'è stato il gol, ricalibra i pesi.
-        """
-        self.optimizer.zero_grad()
-        # Se c'è stato un gol/corner (1.0), la perdita è la distanza da P
-        target = torch.tensor(float(actual_outcome))
-        loss = torch.abs(predicted_p - target)
-        loss.backward()
-        self.optimizer.step()
-        return loss.item()
+# --- SIDEBAR PER INPUT LIVE ---
+st.sidebar.header("Dati Partita Live")
+match_name = st.sidebar.text_input("Partita", "Inter vs Juventus")
+s_val = st.sidebar.slider("Saturazione (S)", 0.0, 10.0, 5.0)
+c_val = st.sidebar.slider("Resistenza (C)", 0.0, 10.0, 5.0)
 
-# ==========================================
-# 3. IL MOTORE: SIMULATORE LIVE & SCRAPER
-# ==========================================
-def get_match_nutrients():
-    """Simula l'arrivo di dati real-time dai campi"""
-    return {
-        "E": random.uniform(6, 10),  # Evento Radice (Energia iniziale)
-        "N": random.uniform(5, 9),   # Nutrienti (Possesso trequarti)
-        "S": random.uniform(7, 10),  # Saturazione (Attacchi continui)
-        "C": random.uniform(4, 8),   # Contro-Evento (Resistenza)
-        "T": random.uniform(1, 4)    # Tempo di Adattamento (Reattività)
-    }
+# --- AREA PRINCIPALE ---
+col1, col2 = st.columns(2)
 
-# ==========================================
-# 4. IL DEPLOY: ESECUZIONE TOTALE
-# ==========================================
-def start_root_system():
-    print("🚀 SISTEMA ROOT-AI ATTIVO")
-    print("Teoria della Radice di Marco: Causalità Adattiva v2.0")
-    print("-" * 50)
+with col1:
+    p_attuale = calcola_p(8, 7, s_val, c_val, 2) # E, N, T simulati o fissi
+    st.metric(label="PRESSIONE RADICE (P)", value=f"{p_attuale:.2f}", delta=f"{p_attuale-7:.2f}")
     
-    engine = RootEngine()
-    
-    try:
-        while True:
-            # 1. Prendi i nutrienti live
-            data = get_match_nutrients()
-            
-            # 2. Calcola la Pressione P
-            p_val = engine.calculate_p(data['E'], data['N'], data['S'], data['C'], data['T'])
-            
-            # 3. Determina il segnale
-            print(f"DEBUG | P: {p_val.item():.2f} | Sat: {data['S']:.2f} | Res: {data['C']:.2f}")
-            
-            if p_val > 9.0:
-                print("🔥 [ALERTA CRITICA] Punto di Rottura Identificato! Probabile GOL/CORNER.")
-            elif p_val > 7.5:
-                print("⚠️ [ACCUMULO] Pressione in aumento. Monitorare ramificazione.")
-            
-            # 4. Simulazione Feedback AI (In un caso reale avviene dopo l'evento)
-            # Se P > 9, simuliamo che l'evento sia accaduto (1.0) per allenare l'AI
-            if p_val > 9.0:
-                loss = engine.update_ai(p_val, 1.0)
-                print(f"🧠 AI: Apprendimento completato (Loss: {loss:.4f})")
-            
-            print("-" * 30)
-            time.sleep(5) # Aggiornamento ogni 5 secondi per il test
-            
-    except KeyboardInterrupt:
-        print("\n🛑 Sistema interrotto dall'utente.")
+    # Progress Bar della Saturazione
+    st.write("Livello di Saturazione Critica")
+    st.progress(min(p_attuale / 12, 1.0)) # Normalizzato per la barra
 
-if __name__ == "__main__":
-    start_root_system()
+with col2:
+    st.subheader("Verdetto AI")
+    if p_attuale > 9.0:
+        st.error("🔥 PUNTO DI ROTTURA! Alta probabilità di Gol/Corner")
+    elif p_attuale > 7.5:
+        st.warning("⚠️ ACCUMULO: La radice sta avvolgendo l'area")
+    else:
+        st.success("❄️ STASI: Sistema in equilibrio")
+
+# --- GRAFICO STORICO (Simulato) ---
+st.divider()
+st.subheader("Andamento Pressione ultimi 30 minuti")
+chart_data = pd.DataFrame(np.random.randn(30, 1) * 0.5 + p_attuale, columns=['Pressione'])
+st.line_chart(chart_data)
+
+# --- TABELLA ULTIMI 100 RISULTATI ---
+st.subheader("Archivio Risultati (Ultime 100 Partite)")
+# Qui l'AI caricherebbe il file CSV che abbiamo discusso
+df_history = pd.DataFrame({
+    'Partita': ['Milan-Roma', 'PSG-OM', 'City-Liverpool'] * 33 + ['Inter-Juve'],
+    'Pressione Max': [8.9, 9.2, 7.5] * 33 + [p_attuale],
+    'Esito': ['Vinta', 'Vinta', 'Persa (Stasi)'] * 33 + ['In Corso']
+})
+st.table(df_history.head(10))
